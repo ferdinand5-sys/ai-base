@@ -1,25 +1,24 @@
 const express = require('express');
-const fetch = require('node-fetch');
-const cors = require('cors');
+const cors = require('cors'); // 追加
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
 const app = express();
+app.use(cors()); // 全てのアクセスを許可する設定
 app.use(express.json());
-app.use(cors());
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
 app.post('/ask', async (req, res) => {
-    const { prompt } = req.body;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
     try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-        });
-        const data = await response.json();
-        const aiText = data.candidates[0].content.parts[0].text;
-        res.send(aiText);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const result = await model.generateContent(req.body.prompt);
+        const response = await result.response;
+        res.send(response.text());
     } catch (error) {
-        res.status(500).send("AI基地での通信エラーです");
+        res.status(500).send(error.toString());
     }
 });
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`基地が動いています：ポート${PORT}`));
+
+app.get('/', (req, res) => res.send('AI Base (Node.js) is Running!'));
+
+app.listen(10000, () => console.log('Server running on port 10000'));
